@@ -3,183 +3,154 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#191619" />
+    <meta name="theme-color" content="#120b08" />
     <meta
       name="description"
-      content="不用註冊、不用資料庫，按一下拉霸，讓今晚的晚餐交給命運決定。"
+      content="同時抽出料理、餐點與吃法的晚餐拉霸；選項可自由挑選與新增，資料只留在你的裝置。"
     />
-    <title>今晚吃什麼？｜晚餐拉霸</title>
+    <title>今晚吃什麼？｜三欄晚餐拉霸</title>
     <link rel="stylesheet" href="styles.css" />
     <script src="app.js" defer></script>
   </head>
   <body>
-    <div class="page-shell">
-      <header class="topbar">
-        <a class="brand" href="#main" aria-label="今晚吃什麼？回到主畫面">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 48 48" role="img">
-              <path d="M12 25h24c0 8-4.8 13-12 13S12 33 12 25Z" />
-              <path d="M9 25h30M17 41h14" />
-              <path d="M18 20c-5-5 4-7-1-12M26 20c-5-5 4-7-1-12M34 20c-5-5 4-7-1-12" />
-            </svg>
-          </span>
-          <span>今晚吃什麼？</span>
-        </a>
+    <main class="app-shell">
+      <h1 class="sr-only">今晚吃什麼？三欄晚餐拉霸</h1>
 
-        <nav class="top-actions" aria-label="工具">
-          <button class="utility-button" type="button" data-open="options-dialog">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="m4 20 4.2-1 10.6-10.6-3.2-3.2L5 15.8 4 20ZM14.5 6.3l3.2 3.2" />
-            </svg>
-            <span>編輯選項</span>
-          </button>
-          <button class="utility-button" type="button" data-open="history-dialog">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M8 6h12M8 12h12M8 18h12" />
-              <circle cx="3.5" cy="6" r="1" />
-              <circle cx="3.5" cy="12" r="1" />
-              <circle cx="3.5" cy="18" r="1" />
-            </svg>
-            <span>查看最近結果</span>
-          </button>
-        </nav>
-      </header>
-
-      <main id="main" class="main-content">
-        <section class="intro" aria-labelledby="page-title">
-          <h1 id="page-title">晚餐交給命運決定</h1>
-          <p>把選擇困難留在門外，按一下就開吃。</p>
-        </section>
-
-        <section class="slot-stage" aria-label="晚餐拉霸機">
-          <div class="slot-machine" id="slot-machine">
-            <div class="machine-lights machine-lights-left" aria-hidden="true">
-              <i></i><i></i><i></i>
-            </div>
-            <div class="machine-lights machine-lights-right" aria-hidden="true">
-              <i></i><i></i><i></i>
-            </div>
-
-            <div class="reel-frame">
-              <div class="reel-window" data-reel="0" aria-live="off">
-                <span class="reel-pointer" aria-hidden="true"></span>
-                <div class="reel-item">
-                  <span class="food-icon" aria-hidden="true">🍜</span>
-                  <span class="food-name">牛肉麵</span>
-                </div>
-              </div>
-              <div class="reel-window" data-reel="1" aria-live="off">
-                <span class="reel-pointer" aria-hidden="true"></span>
-                <div class="reel-item">
-                  <span class="food-icon" aria-hidden="true">🍣</span>
-                  <span class="food-name">壽司</span>
-                </div>
-              </div>
-              <div class="reel-window" data-reel="2" aria-live="off">
-                <span class="reel-pointer" aria-hidden="true"></span>
-                <div class="reel-item">
-                  <span class="food-icon" aria-hidden="true">🍲</span>
-                  <span class="food-name">火鍋</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="machine-control-row">
-              <span class="checker" aria-hidden="true"></span>
-              <button class="spin-button" id="spin-button" type="button">
-                <span class="spin-label">開始拉霸</span>
-                <span class="spin-loading" aria-hidden="true">命運轉動中</span>
-              </button>
-              <span class="checker" aria-hidden="true"></span>
-            </div>
+      <section class="slot-stage" aria-label="晚餐拉霸機">
+        <div class="slot-machine" id="slot-machine">
+          <div class="machine-bulbs" aria-hidden="true">
+            <i></i><i></i><i></i><i></i><i></i><i></i>
           </div>
 
-          <button class="lever" id="lever" type="button" aria-label="拉下把手開始拉霸">
-            <span class="lever-ball"></span>
-            <span class="lever-stick"></span>
-            <span class="lever-base"></span>
-          </button>
-        </section>
+          <div class="reel-housing">
+            <article class="reel-column" data-reel="cuisine">
+              <p class="reel-label">料理</p>
+              <div class="reel-window">
+                <div class="reel-content">
+                  <span class="reel-icon" aria-hidden="true">🏷️</span>
+                  <strong class="reel-value">輕食</strong>
+                </div>
+              </div>
+            </article>
 
-        <section class="result-panel" id="result-panel" aria-live="polite" aria-atomic="true">
-          <p class="result-copy">
-            <span id="result-prefix">準備好了嗎？</span>
-            <strong id="result-name">按下開始拉霸</strong>
-          </p>
-        </section>
+            <article class="reel-column" data-reel="meal">
+              <p class="reel-label">餐點</p>
+              <div class="reel-window">
+                <div class="reel-content">
+                  <span class="reel-icon" aria-hidden="true">⭐</span>
+                  <strong class="reel-value">木盆沙拉</strong>
+                </div>
+              </div>
+            </article>
 
-        <div class="result-actions" id="result-actions" hidden>
-          <button class="decision-button decision-button-primary" id="accept-button" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6" /></svg>
-            就吃這個
-          </button>
-          <button class="decision-button" id="again-button" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
-            </svg>
-            再抽一次
-          </button>
+            <article class="reel-column" data-reel="method">
+              <p class="reel-label">吃法</p>
+              <div class="reel-window">
+                <div class="reel-content">
+                  <span class="reel-icon" aria-hidden="true">🛍️</span>
+                  <strong class="reel-value">內用</strong>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="result-summary" aria-live="polite" aria-atomic="true">
+            <strong id="result-main">★ 木盆沙拉</strong>
+            <span id="result-detail">輕食 · 內用</span>
+          </div>
+
+          <div class="machine-actions">
+            <button class="spin-button" id="spin-button" type="button">
+              <span class="button-idle">開抽</span>
+              <span class="button-busy">抽選中…</span>
+            </button>
+            <button class="meal-only-button" id="meal-only-button" type="button">只換餐點</button>
+          </div>
         </div>
-      </main>
 
-      <footer class="privacy-note">
-        <span></span>
-        <p>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="5" y="10" width="14" height="10" rx="2" />
-            <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-          </svg>
-          選項只會儲存在這台裝置
-        </p>
-        <span></span>
-      </footer>
-    </div>
+        <button class="lever" id="lever" type="button" aria-label="拉下把手，開始抽選">
+          <span class="lever-ball"></span>
+          <span class="lever-stick"></span>
+          <span class="lever-base"></span>
+        </button>
+      </section>
 
-    <dialog class="app-dialog" id="options-dialog" aria-labelledby="options-title">
-      <form class="dialog-card" id="options-form" method="dialog">
-        <div class="dialog-header">
+      <section class="options-panel" aria-labelledby="options-title">
+        <div class="options-heading">
           <div>
-            <h2 id="options-title">今晚有哪些選擇？</h2>
-            <p>至少保留 2 個選項，拉霸才轉得起來。</p>
+            <h2 id="options-title">想抽哪些選項？</h2>
+            <p>點選可排除，再點一次就加回來</p>
           </div>
-          <button class="icon-button" type="button" data-close aria-label="關閉編輯選項視窗">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
+          <button class="reset-button" id="reset-button" type="button">恢復預設</button>
+        </div>
+
+        <div class="category-tabs" role="tablist" aria-label="選項類別">
+          <button
+            class="category-tab is-active"
+            id="tab-cuisine"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="options-content"
+            data-group="cuisine"
+          >
+            料理 <span data-count="cuisine"></span>
+          </button>
+          <button
+            class="category-tab"
+            id="tab-meal"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="options-content"
+            data-group="meal"
+          >
+            餐點 <span data-count="meal"></span>
+          </button>
+          <button
+            class="category-tab"
+            id="tab-method"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="options-content"
+            data-group="method"
+          >
+            吃法 <span data-count="method"></span>
           </button>
         </div>
 
-        <div class="add-option-row">
-          <label class="sr-only" for="new-option">新增晚餐選項</label>
-          <input id="new-option" maxlength="16" autocomplete="off" placeholder="例如：鹽酥雞" />
-          <button id="add-option-button" type="button">＋ 新增</button>
-        </div>
-        <p class="form-message" id="form-message" role="status"></p>
-        <ul class="option-list" id="option-list"></ul>
+        <div
+          class="options-content"
+          id="options-content"
+          role="tabpanel"
+          aria-labelledby="tab-cuisine"
+        >
+          <div class="option-chips" id="option-chips"></div>
 
-        <div class="dialog-footer">
-          <button class="text-button" id="restore-button" type="button">恢復預設</button>
-          <button class="save-button" id="save-options-button" type="submit">儲存選項</button>
+          <form class="add-option-form" id="add-option-form">
+            <label class="sr-only" for="new-option">新增自訂選項</label>
+            <input
+              id="new-option"
+              name="new-option"
+              maxlength="18"
+              autocomplete="off"
+              placeholder="新增自訂料理，例如：港式"
+            />
+            <button type="submit">＋ 新增</button>
+          </form>
+          <p class="form-message" id="form-message" role="status"></p>
         </div>
-      </form>
-    </dialog>
+      </section>
 
-    <dialog class="app-dialog" id="history-dialog" aria-labelledby="history-title">
-      <div class="dialog-card history-card">
-        <div class="dialog-header">
-          <div>
-            <h2 id="history-title">最近吃了什麼？</h2>
-            <p>按下「就吃這個」後，會保留最近 8 次結果。</p>
-          </div>
-          <button class="icon-button" type="button" data-close aria-label="關閉最近結果視窗">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>
-          </button>
-        </div>
-        <ol class="history-list" id="history-list"></ol>
-        <div class="dialog-footer history-footer">
-          <button class="text-button danger-button" id="clear-history-button" type="button">清除紀錄</button>
-          <button class="save-button" type="button" data-close>完成</button>
-        </div>
-      </div>
-    </dialog>
+      <p class="privacy-note">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+          <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+        </svg>
+        不用登入，選項只會儲存在這台裝置
+      </p>
+    </main>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>

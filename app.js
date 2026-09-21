@@ -1,378 +1,399 @@
-const STORAGE_KEYS = {
-  options: "dinner-slot-options-v1",
-  history: "dinner-slot-history-v1",
+const STORAGE_KEY = "dinner-slot-groups-v2";
+
+const GROUP_META = {
+  cuisine: {
+    label: "料理",
+    placeholder: "新增自訂料理，例如：港式",
+    fallbackEmoji: "🏷️",
+  },
+  meal: {
+    label: "餐點",
+    placeholder: "新增自訂餐點，例如：鹽酥雞",
+    fallbackEmoji: "⭐",
+  },
+  method: {
+    label: "吃法",
+    placeholder: "新增自訂吃法，例如：野餐",
+    fallbackEmoji: "🛍️",
+  },
 };
 
-const DEFAULT_OPTIONS = [
-  "牛肉麵",
-  "壽司",
-  "火鍋",
-  "水餃",
-  "咖哩飯",
-  "滷肉飯",
-  "義大利麵",
-  "韓式料理",
-  "鹽酥雞",
-  "便當",
-  "披薩",
-  "蔬食",
-];
+const DEFAULT_GROUPS = {
+  cuisine: [
+    ["台式", "🍚"],
+    ["日式", "🍣"],
+    ["韓式", "🥘"],
+    ["西式", "🍝"],
+    ["東南亞", "🌶️"],
+    ["鍋類", "🍲"],
+    ["小吃", "🥟"],
+    ["輕食", "🏷️"],
+  ],
+  meal: [
+    ["木盆沙拉", "⭐"],
+    ["牛肉麵", "🍜"],
+    ["壽司", "🍣"],
+    ["火鍋", "🍲"],
+    ["咖哩飯", "🍛"],
+    ["滷肉飯", "🍚"],
+    ["義大利麵", "🍝"],
+    ["水餃", "🥟"],
+    ["便當", "🍱"],
+    ["披薩", "🍕"],
+  ],
+  method: [
+    ["內用", "🛍️"],
+    ["外帶", "🥡"],
+    ["外送", "🛵"],
+    ["自己煮", "🍳"],
+  ],
+};
 
 const EMOJI_RULES = [
-  [/牛肉麵|麵|拉麵|烏龍/, "🍜"],
+  [/沙拉|輕食/, "🥗"],
+  [/牛肉麵|拉麵|烏龍|麵/, "🍜"],
   [/壽司|生魚|日式/, "🍣"],
   [/火鍋|鍋|麻辣/, "🍲"],
   [/水餃|餃|小籠包|包子/, "🥟"],
   [/咖哩/, "🍛"],
   [/滷肉飯|便當|飯|丼/, "🍱"],
-  [/義大利|義麵/, "🍝"],
+  [/義大利|西式/, "🍝"],
   [/韓式|韓國|泡菜/, "🥘"],
   [/鹽酥雞|炸雞|雞排/, "🍗"],
   [/披薩|比薩/, "🍕"],
-  [/蔬食|素食|沙拉/, "🥗"],
   [/漢堡/, "🍔"],
   [/燒肉|烤肉/, "🥩"],
   [/海鮮|蝦|魚/, "🦐"],
-  [/粥/, "🥣"],
-  [/早餐|蛋餅/, "🍳"],
+  [/台式|小吃/, "🍚"],
+  [/東南亞|泰式|越式/, "🌶️"],
+  [/內用/, "🛍️"],
+  [/外帶/, "🥡"],
+  [/外送/, "🛵"],
+  [/自煮|自己煮|料理/, "🍳"],
 ];
 
-const FALLBACK_EMOJIS = ["🍽️", "🥢", "🍚", "🥡", "🍴", "😋"];
-
 const els = {
-  slotMachine: document.querySelector("#slot-machine"),
+  machine: document.querySelector("#slot-machine"),
   spinButton: document.querySelector("#spin-button"),
+  mealOnlyButton: document.querySelector("#meal-only-button"),
   lever: document.querySelector("#lever"),
-  reels: [...document.querySelectorAll(".reel-window")],
-  resultPanel: document.querySelector("#result-panel"),
-  resultPrefix: document.querySelector("#result-prefix"),
-  resultName: document.querySelector("#result-name"),
-  resultActions: document.querySelector("#result-actions"),
-  acceptButton: document.querySelector("#accept-button"),
-  againButton: document.querySelector("#again-button"),
-  optionsDialog: document.querySelector("#options-dialog"),
-  optionsForm: document.querySelector("#options-form"),
+  resultMain: document.querySelector("#result-main"),
+  resultDetail: document.querySelector("#result-detail"),
+  resultSummary: document.querySelector(".result-summary"),
+  tabs: [...document.querySelectorAll(".category-tab")],
+  tabPanel: document.querySelector("#options-content"),
+  counts: [...document.querySelectorAll("[data-count]")],
+  optionChips: document.querySelector("#option-chips"),
+  addForm: document.querySelector("#add-option-form"),
   newOption: document.querySelector("#new-option"),
-  addOptionButton: document.querySelector("#add-option-button"),
-  optionList: document.querySelector("#option-list"),
   formMessage: document.querySelector("#form-message"),
-  restoreButton: document.querySelector("#restore-button"),
-  historyDialog: document.querySelector("#history-dialog"),
-  historyList: document.querySelector("#history-list"),
-  clearHistoryButton: document.querySelector("#clear-history-button"),
+  resetButton: document.querySelector("#reset-button"),
   toast: document.querySelector("#toast"),
+  reels: Object.fromEntries(
+    [...document.querySelectorAll("[data-reel]")].map((reel) => [reel.dataset.reel, reel]),
+  ),
 };
 
-let options = loadArray(STORAGE_KEYS.options, DEFAULT_OPTIONS);
-let history = loadArray(STORAGE_KEYS.history, []);
-let draftOptions = [...options];
-let currentResult = null;
+let groups = loadGroups();
+let activeGroup = "cuisine";
 let isSpinning = false;
 let toastTimer;
+let currentResult = {
+  cuisine: findInitialItem("cuisine", "輕食"),
+  meal: findInitialItem("meal", "木盆沙拉"),
+  method: findInitialItem("method", "內用"),
+};
 
-function loadArray(key, fallback) {
+function createDefaultGroups() {
+  return Object.fromEntries(
+    Object.entries(DEFAULT_GROUPS).map(([groupKey, values]) => [
+      groupKey,
+      values.map(([label, emoji], index) => ({
+        id: `${groupKey}-${index}`,
+        label,
+        emoji,
+        selected: true,
+        custom: false,
+      })),
+    ]),
+  );
+}
+
+function loadGroups() {
+  const defaults = createDefaultGroups();
+
   try {
-    const parsed = JSON.parse(localStorage.getItem(key));
-    return Array.isArray(parsed) && parsed.length ? parsed : [...fallback];
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (!saved || typeof saved !== "object") return defaults;
+
+    for (const groupKey of Object.keys(GROUP_META)) {
+      if (!Array.isArray(saved[groupKey]) || !saved[groupKey].length) return defaults;
+      saved[groupKey] = saved[groupKey]
+        .filter((item) => item && typeof item.label === "string")
+        .map((item, index) => ({
+          id: String(item.id || `${groupKey}-saved-${index}`),
+          label: item.label.slice(0, 18),
+          emoji: String(item.emoji || getEmoji(item.label, groupKey)),
+          selected: item.selected !== false,
+          custom: item.custom === true,
+        }));
+
+      if (!saved[groupKey].some((item) => item.selected)) saved[groupKey][0].selected = true;
+    }
+
+    return saved;
   } catch {
-    return [...fallback];
+    return defaults;
   }
 }
 
-function saveArray(key, value) {
+function saveGroups() {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
   } catch {
-    showToast("瀏覽器無法儲存資料，但這次仍可繼續使用");
+    showToast("目前無法儲存，但本次仍可繼續使用");
   }
 }
 
-function getEmoji(label) {
+function findInitialItem(groupKey, preferredLabel) {
+  const selected = getSelectedItems(groupKey);
+  return selected.find((item) => item.label === preferredLabel) || selected[0];
+}
+
+function getSelectedItems(groupKey) {
+  return groups[groupKey].filter((item) => item.selected);
+}
+
+function getEmoji(label, groupKey) {
   const matched = EMOJI_RULES.find(([rule]) => rule.test(label));
-  if (matched) return matched[1];
-
-  const hash = [...label].reduce((total, char) => total + char.charCodeAt(0), 0);
-  return FALLBACK_EMOJIS[hash % FALLBACK_EMOJIS.length];
+  return matched?.[1] || GROUP_META[groupKey].fallbackEmoji;
 }
 
-function randomOption(exclude = "") {
-  const pool = options.length > 1 ? options.filter((item) => item !== exclude) : options;
+function randomItem(groupKey, excludeId = "") {
+  const selected = getSelectedItems(groupKey);
+  const pool = selected.length > 1 ? selected.filter((item) => item.id !== excludeId) : selected;
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function setReelContent(reel, label) {
-  reel.querySelector(".food-icon").textContent = getEmoji(label);
-  reel.querySelector(".food-name").textContent = label;
+function setReel(groupKey, item) {
+  const reel = els.reels[groupKey];
+  reel.querySelector(".reel-icon").textContent = item.emoji;
+  reel.querySelector(".reel-value").textContent = item.label;
+}
+
+function updateResult() {
+  els.resultMain.textContent = `★ ${currentResult.meal.label}`;
+  els.resultDetail.textContent = `${currentResult.cuisine.label} · ${currentResult.method.label}`;
+  els.resultSummary.classList.remove("is-celebrating");
+  void els.resultSummary.offsetWidth;
+  els.resultSummary.classList.add("is-celebrating");
 }
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-async function spin() {
-  if (isSpinning || options.length < 2) return;
+async function animateReel(groupKey, winner, duration) {
+  const reel = els.reels[groupKey];
+  reel.classList.remove("has-landed");
+  reel.classList.add("is-spinning");
 
+  const ticker = window.setInterval(() => setReel(groupKey, randomItem(groupKey)), 72);
+  await wait(duration);
+  window.clearInterval(ticker);
+  setReel(groupKey, winner);
+  reel.classList.remove("is-spinning");
+  reel.classList.add("has-landed");
+}
+
+function setControlsDisabled(disabled) {
+  els.spinButton.disabled = disabled;
+  els.mealOnlyButton.disabled = disabled;
+  els.lever.disabled = disabled;
+}
+
+async function spin(groupKeys = ["cuisine", "meal", "method"]) {
+  if (isSpinning) return;
   isSpinning = true;
-  currentResult = null;
-  const winner = randomOption(els.resultName.textContent);
-  els.spinButton.disabled = true;
-  els.lever.disabled = true;
-  els.spinButton.classList.add("is-pressed");
+  setControlsDisabled(true);
+  els.machine.classList.add("is-spinning");
   els.lever.classList.remove("is-pulled");
   void els.lever.offsetWidth;
   els.lever.classList.add("is-pulled");
-  els.slotMachine.classList.add("is-spinning");
-  els.resultActions.hidden = true;
-  els.resultPanel.classList.remove("is-celebrating");
-  els.resultPrefix.textContent = "正在問命運…";
-  els.resultName.textContent = "再等一下";
 
-  els.reels.forEach((reel) => {
-    reel.classList.remove("has-landed");
-    reel.classList.add("is-spinning");
-  });
-
-  const tickers = els.reels.map((reel, index) =>
-    window.setInterval(() => setReelContent(reel, randomOption()), 74 + index * 9),
+  const winners = Object.fromEntries(
+    groupKeys.map((groupKey) => [groupKey, randomItem(groupKey, currentResult[groupKey]?.id)]),
   );
 
-  for (let index = 0; index < els.reels.length; index += 1) {
-    await wait(720 + index * 330);
-    window.clearInterval(tickers[index]);
-    const reel = els.reels[index];
-    setReelContent(reel, winner);
-    reel.classList.remove("is-spinning");
-    reel.classList.add("has-landed");
+  await Promise.all(
+    groupKeys.map((groupKey, index) =>
+      animateReel(groupKey, winners[groupKey], 760 + index * 260),
+    ),
+  );
+
+  groupKeys.forEach((groupKey) => {
+    currentResult[groupKey] = winners[groupKey];
+  });
+  updateResult();
+  els.machine.classList.remove("is-spinning");
+  setControlsDisabled(false);
+  isSpinning = false;
+}
+
+function renderTabs() {
+  els.tabs.forEach((tab) => {
+    const isActive = tab.dataset.group === activeGroup;
+    tab.classList.toggle("is-active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+
+  els.counts.forEach((count) => {
+    count.textContent = getSelectedItems(count.dataset.count).length;
+  });
+
+  els.tabPanel.setAttribute("aria-labelledby", `tab-${activeGroup}`);
+  els.newOption.placeholder = GROUP_META[activeGroup].placeholder;
+}
+
+function renderOptions() {
+  const chips = groups[activeGroup].map((item) => {
+    const wrap = document.createElement("span");
+    wrap.className = `option-chip-wrap${item.selected ? " is-selected" : ""}`;
+
+    const toggle = document.createElement("button");
+    toggle.className = "option-chip";
+    toggle.type = "button";
+    toggle.dataset.action = "toggle";
+    toggle.dataset.id = item.id;
+    toggle.setAttribute("aria-pressed", String(item.selected));
+    toggle.textContent = `${item.emoji} ${item.label}`;
+
+    wrap.append(toggle);
+
+    if (item.custom) {
+      const remove = document.createElement("button");
+      remove.className = "remove-chip";
+      remove.type = "button";
+      remove.dataset.action = "remove";
+      remove.dataset.id = item.id;
+      remove.setAttribute("aria-label", `刪除自訂選項 ${item.label}`);
+      remove.textContent = "×";
+      wrap.append(remove);
+    }
+
+    return wrap;
+  });
+
+  els.optionChips.replaceChildren(...chips);
+  renderTabs();
+}
+
+function toggleOption(id) {
+  const item = groups[activeGroup].find((candidate) => candidate.id === id);
+  if (!item) return;
+
+  if (item.selected && getSelectedItems(activeGroup).length === 1) {
+    showToast(`${GROUP_META[activeGroup].label}至少要保留 1 個選項`);
+    return;
   }
 
-  await wait(340);
-  currentResult = winner;
-  els.resultPrefix.textContent = "今晚就吃：";
-  els.resultName.textContent = winner;
-  els.resultPanel.classList.add("is-celebrating");
-  els.resultActions.hidden = false;
-  els.slotMachine.classList.remove("is-spinning");
-  els.spinButton.classList.remove("is-pressed");
-  els.spinButton.disabled = false;
-  els.lever.disabled = false;
-  isSpinning = false;
-  els.acceptButton.focus({ preventScroll: true });
+  item.selected = !item.selected;
+  saveGroups();
+  renderOptions();
 }
 
-function acceptResult() {
-  if (!currentResult) return;
+function removeOption(id) {
+  const index = groups[activeGroup].findIndex((item) => item.id === id && item.custom);
+  if (index < 0) return;
 
-  history.unshift({
-    name: currentResult,
-    timestamp: new Date().toISOString(),
-  });
-  history = history.slice(0, 8);
-  saveArray(STORAGE_KEYS.history, history);
-  renderHistory();
-  showToast(`好，今晚就吃「${currentResult}」！`);
-  els.acceptButton.textContent = "已決定，開吃！";
-  els.acceptButton.disabled = true;
+  const item = groups[activeGroup][index];
+  if (item.selected && getSelectedItems(activeGroup).length === 1) {
+    showToast(`${GROUP_META[activeGroup].label}至少要保留 1 個選項`);
+    return;
+  }
+
+  groups[activeGroup].splice(index, 1);
+  saveGroups();
+  renderOptions();
+  showToast(`已刪除「${item.label}」`);
 }
 
-function addDraftOption() {
+function addOption(event) {
+  event.preventDefault();
   const value = els.newOption.value.trim().replace(/\s+/g, " ");
   els.formMessage.textContent = "";
 
   if (!value) {
-    els.formMessage.textContent = "先輸入一個晚餐選項吧。";
+    els.formMessage.textContent = "先輸入一個選項吧。";
     els.newOption.focus();
     return;
   }
 
-  if (draftOptions.some((item) => item.toLowerCase() === value.toLowerCase())) {
-    els.formMessage.textContent = "這個選項已經在清單裡了。";
+  const existing = groups[activeGroup].find(
+    (item) => item.label.toLocaleLowerCase("zh-Hant") === value.toLocaleLowerCase("zh-Hant"),
+  );
+  if (existing) {
+    existing.selected = true;
+    saveGroups();
+    renderOptions();
+    els.formMessage.textContent = `「${value}」已經在清單裡，已幫你選取。`;
     els.newOption.select();
     return;
   }
 
-  if (draftOptions.length >= 24) {
-    els.formMessage.textContent = "最多可放 24 個選項。";
+  if (groups[activeGroup].length >= 30) {
+    els.formMessage.textContent = "每一類最多可放 30 個選項。";
     return;
   }
 
-  draftOptions.push(value);
+  groups[activeGroup].push({
+    id: `${activeGroup}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    label: value,
+    emoji: getEmoji(value, activeGroup),
+    selected: true,
+    custom: true,
+  });
+  saveGroups();
   els.newOption.value = "";
   renderOptions();
+  showToast(`已新增「${value}」`);
   els.newOption.focus();
-}
-
-function removeDraftOption(index) {
-  if (draftOptions.length <= 2) {
-    els.formMessage.textContent = "至少要保留 2 個選項。";
-    return;
-  }
-
-  draftOptions.splice(index, 1);
-  els.formMessage.textContent = "";
-  renderOptions();
-}
-
-function renderOptions() {
-  els.optionList.replaceChildren(
-    ...draftOptions.map((option, index) => {
-      const item = document.createElement("li");
-      item.className = "option-item";
-
-      const emoji = document.createElement("span");
-      emoji.className = "option-emoji";
-      emoji.setAttribute("aria-hidden", "true");
-      emoji.textContent = getEmoji(option);
-
-      const label = document.createElement("span");
-      label.className = "option-label";
-      label.textContent = option;
-
-      const remove = document.createElement("button");
-      remove.className = "remove-option";
-      remove.type = "button";
-      remove.dataset.index = String(index);
-      remove.setAttribute("aria-label", `移除 ${option}`);
-      remove.textContent = "×";
-
-      item.append(emoji, label, remove);
-      return item;
-    }),
-  );
-}
-
-function saveOptions(event) {
-  event.preventDefault();
-  if (draftOptions.length < 2) {
-    els.formMessage.textContent = "至少要保留 2 個選項。";
-    return;
-  }
-
-  options = [...draftOptions];
-  saveArray(STORAGE_KEYS.options, options);
-  const startingItems = [options[0], options[1] || options[0], options[2] || options[0]];
-  els.reels.forEach((reel, index) => setReelContent(reel, startingItems[index]));
-  els.optionsDialog.close();
-  showToast(`已儲存 ${options.length} 個晚餐選項`);
-}
-
-function renderHistory() {
-  if (!history.length) {
-    const empty = document.createElement("li");
-    empty.className = "history-empty";
-    empty.innerHTML = "還沒有紀錄。<br>抽到喜歡的結果後，按下「就吃這個」吧！";
-    els.historyList.replaceChildren(empty);
-    els.clearHistoryButton.hidden = true;
-    return;
-  }
-
-  els.clearHistoryButton.hidden = false;
-  els.historyList.replaceChildren(
-    ...history.map((entry, index) => {
-      const item = document.createElement("li");
-      item.className = "history-item";
-
-      const rank = document.createElement("span");
-      rank.className = "history-rank";
-      rank.textContent = String(index + 1).padStart(2, "0");
-
-      const emoji = document.createElement("span");
-      emoji.className = "history-emoji";
-      emoji.setAttribute("aria-hidden", "true");
-      emoji.textContent = getEmoji(entry.name);
-
-      const label = document.createElement("span");
-      label.className = "history-label";
-      label.textContent = entry.name;
-
-      const time = document.createElement("time");
-      time.className = "history-time";
-      time.dateTime = entry.timestamp;
-      const date = new Date(entry.timestamp);
-      time.textContent = Number.isNaN(date.getTime())
-        ? ""
-        : new Intl.DateTimeFormat("zh-TW", {
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(date);
-
-      item.append(rank, emoji, label, time);
-      return item;
-    }),
-  );
 }
 
 function showToast(message) {
   window.clearTimeout(toastTimer);
   els.toast.textContent = message;
   els.toast.classList.add("is-visible");
-  toastTimer = window.setTimeout(() => els.toast.classList.remove("is-visible"), 2600);
+  toastTimer = window.setTimeout(() => els.toast.classList.remove("is-visible"), 2400);
 }
 
-function openDialog(dialog) {
-  if (dialog === els.optionsDialog) {
-    draftOptions = [...options];
+els.tabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    activeGroup = tab.dataset.group;
     els.formMessage.textContent = "";
     els.newOption.value = "";
     renderOptions();
-  } else if (dialog === els.historyDialog) {
-    renderHistory();
-  }
-
-  dialog.showModal();
-}
-
-document.querySelectorAll("[data-open]").forEach((button) => {
-  button.addEventListener("click", () => openDialog(document.querySelector(`#${button.dataset.open}`)));
-});
-
-document.querySelectorAll("[data-close]").forEach((button) => {
-  button.addEventListener("click", () => button.closest("dialog").close());
-});
-
-document.querySelectorAll("dialog").forEach((dialog) => {
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) dialog.close();
   });
 });
 
-els.spinButton.addEventListener("click", spin);
-els.lever.addEventListener("click", spin);
-els.againButton.addEventListener("click", () => {
-  els.acceptButton.disabled = false;
-  els.acceptButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 12 5 5L20 6"></path></svg>就吃這個';
-  spin();
-});
-els.acceptButton.addEventListener("click", acceptResult);
-els.addOptionButton.addEventListener("click", addDraftOption);
-els.newOption.addEventListener("keydown", (event) => {
-  if (event.key === "Enter") {
-    event.preventDefault();
-    addDraftOption();
-  }
-});
-els.optionList.addEventListener("click", (event) => {
-  const button = event.target.closest(".remove-option");
-  if (button) removeDraftOption(Number(button.dataset.index));
-});
-els.restoreButton.addEventListener("click", () => {
-  draftOptions = [...DEFAULT_OPTIONS];
-  els.formMessage.textContent = "已恢復預設，按儲存才會套用。";
-  renderOptions();
-});
-els.optionsForm.addEventListener("submit", saveOptions);
-els.clearHistoryButton.addEventListener("click", () => {
-  history = [];
-  try {
-    localStorage.removeItem(STORAGE_KEYS.history);
-  } catch {
-    // Clearing the in-memory history still keeps the current session usable.
-  }
-  renderHistory();
-  showToast("最近結果已清除");
+els.optionChips.addEventListener("click", (event) => {
+  const target = event.target.closest("button[data-action]");
+  if (!target) return;
+  if (target.dataset.action === "toggle") toggleOption(target.dataset.id);
+  if (target.dataset.action === "remove") removeOption(target.dataset.id);
 });
 
-const initialItems = [options[0], options[1] || options[0], options[2] || options[0]];
-els.reels.forEach((reel, index) => setReelContent(reel, initialItems[index]));
-renderHistory();
+els.addForm.addEventListener("submit", addOption);
+els.spinButton.addEventListener("click", () => spin());
+els.lever.addEventListener("click", () => spin());
+els.mealOnlyButton.addEventListener("click", () => spin(["meal"]));
+els.resetButton.addEventListener("click", () => {
+  groups = createDefaultGroups();
+  saveGroups();
+  renderOptions();
+  showToast("已恢復所有預設選項");
+});
+
+Object.entries(currentResult).forEach(([groupKey, item]) => setReel(groupKey, item));
+updateResult();
+renderOptions();
